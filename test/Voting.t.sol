@@ -5,6 +5,7 @@ import {Test, console2} from "forge-std/Test.sol";
 import {Voting} from "../src/Voting.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
+import {WethMock} from "../src/WethMock.sol";
 
 contract VotingTest is Test {
     using ECDSA for bytes32;
@@ -162,6 +163,14 @@ contract VotingTest is Test {
         vm.prank(operator);
         vm.expectRevert("Invalid Signature");
         voting.voteWithSignature(fakeChoice, civilian, realNonce, signature);
+    }
+
+    function test_erc20_Deal() public {
+        WethMock wethMock = new WethMock();
+        address alice = makeAddr("alice");
+        deal(address(wethMock), alice, 1 ether);
+        uint256 balanceAlice = wethMock.balanceOf(alice);
+        assertEq(1 ether, balanceAlice);
     }
 
     function _hashMessage(uint256 _candidateId, address _votingAddress, uint256 _nonce)
