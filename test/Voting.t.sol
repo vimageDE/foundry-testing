@@ -96,7 +96,7 @@ contract VotingTest is Test {
 
     function test_vote_fromOtherAddress() public {
         voting.vote(2);
-        vm.expectRevert((bytes("Already Voted")));
+        vm.expectRevert(bytes("Already Voted"));
         voting.vote(2);
         vm.prank(address(1));
         voting.vote(2);
@@ -109,17 +109,66 @@ contract VotingTest is Test {
         uint256 realChoice = 1;
         uint256 realNonce = 0;
 
-        vm.startPrank(civilian);
         bytes32 hash = _hashMessage(realChoice, civilian, realNonce);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(civilianPK, hash);
         bytes memory signature = abi.encodePacked(r, s, v);
-        vm.stopPrank();
 
         vm.prank(operator);
         voting.voteWithSignature(realChoice, civilian, realNonce, signature);
     }
 
-    function _hashMessage(uint256 _candidateId, address _votingAddress, uint256 _nonce) internal view returns (bytes32) {
+    function test_voteWitSignature_nonceUsed() public {
+        address operator = makeAddr("operator");
+
+        (address civilian, uint256 civilianPK) = makeAddrAndKey("civilian");
+        uint256 realChoice = 1;
+        uint256 realNonce = 0;
+
+        bytes32 hash = _hashMessage(realChoice, civilian, realNonce);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(civilianPK, hash);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        vm.startPrank(operator);
+        voting.voteWithSignature(realChoice, civilian, realNonce, signature);
+        vm.expectRevert(bytes("Nonce Used"));
+        voting.voteWithSignature(realChoice, civilian, realNonce, signature);
+        vm.stopPrank();
+    }
+
+    function test_voteWithSignature_invalidSignature() public {
+        address operator = makeAddr("operator");
+
+        (address civilian, uint256 civilianPK) = makeAddrAndKey("civilian");
+        (, uint256 attackerPK) = makeAddrAndKey("attacker");
+        uint256 realChoice = 1;
+        uint256 realNonce = 0;
+
+        // Create attacker message wrong votingAddress
+        bytes32 hash = _hashMessage(realChoice, civilian, realNonce);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(attackerPK, hash);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        vm.prank(operator);
+        vm.expectRevert("Invalid Signature");
+        voting.voteWithSignature(realChoice, civilian, realNonce, signature);
+
+        // Create attacker message wrong choice
+        hash = _hashMessage(realChoice, civilian, realNonce);
+        (v, r, s) = vm.sign(civilianPK, hash);
+        signature = abi.encodePacked(r, s, v);
+
+        uint256 fakeChoice = realChoice + 1;
+
+        vm.prank(operator);
+        vm.expectRevert("Invalid Signature");
+        voting.voteWithSignature(fakeChoice, civilian, realNonce, signature);
+    }
+
+    function _hashMessage(uint256 _candidateId, address _votingAddress, uint256 _nonce)
+        internal
+        view
+        returns (bytes32)
+    {
         // EIP712 domain type
         string memory name = "Voting";
         string memory version = "1";
@@ -129,7 +178,7 @@ contract VotingTest is Test {
         // stringified types
         string memory EIP712_DOMAIN_TYPE =
             "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)";
-        string memory MESSAGE_TYPE = "VotingData(uint256 candidateId,address votingAddress,uint256 nonce)";
+        string memory MESSAGE_TYPE = "VotingData(uint256 candidateId,address votingAddress,uint256 nonce,string test)";
 
         // hash to domain to prevent signature collision
         bytes32 DOMAIN_SEPERATOR = keccak256(
@@ -152,8 +201,8 @@ contract VotingTest is Test {
                         keccak256(bytes(MESSAGE_TYPE)),
                         _candidateId, // Input candidate
                         _votingAddress, // Input voting address
-                        _nonce // Input nonce
-                            // keccak256(abi.encodePacked(hypothetical string input))
+                        _nonce, // Input nonce
+                        keccak256("test") // string example input
                     )
                 )
             )

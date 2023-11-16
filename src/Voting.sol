@@ -6,8 +6,8 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 contract Voting is EIP712("Voting", "1") {
     using ECDSA for bytes32;
+    
     // structure of a candidate
-
     struct Candidate {
         uint256 id;
         string name;
@@ -16,7 +16,7 @@ contract Voting is EIP712("Voting", "1") {
 
     // Voting Hash Type
     bytes32 private constant VOTING_TYPE_HASH =
-        keccak256("VotingData(uint256 candidateId,address votingAddress,uint256 nonce)");
+        keccak256("VotingData(uint256 candidateId,address votingAddress,uint256 nonce,string test)");
 
     // VotingTime
     uint256 public constant VOTE_TIME = 1 days;
@@ -92,6 +92,8 @@ contract Voting is EIP712("Voting", "1") {
         view
         returns (bytes32)
     {
-        return _hashTypedDataV4(keccak256(abi.encode(VOTING_TYPE_HASH, _candidateId, _votingAddress, _nonce)));
+        return _hashTypedDataV4(
+            keccak256(abi.encode(VOTING_TYPE_HASH, _candidateId, _votingAddress, _nonce, keccak256("test")))
+        );
     }
 }
