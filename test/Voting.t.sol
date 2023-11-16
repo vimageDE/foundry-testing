@@ -134,9 +134,9 @@ contract VotingTest is Test {
         // hash to domain to prevent signature collision
         bytes32 DOMAIN_SEPERATOR = keccak256(
             abi.encode(
-                keccak256(abi.encodePacked(EIP712_DOMAIN_TYPE)),
-                keccak256(abi.encodePacked(name)),
-                keccak256(abi.encodePacked(version)),
+                keccak256(bytes(EIP712_DOMAIN_TYPE)),
+                keccak256(bytes(name)),
+                keccak256(bytes(version)),
                 chainId,
                 verifyingContract
             )
@@ -148,8 +148,8 @@ contract VotingTest is Test {
                 "\x19\x01", // backslash is needed to escape the character
                 DOMAIN_SEPERATOR,
                 keccak256(
-                    abi.encodePacked(
-                        keccak256(abi.encodePacked(MESSAGE_TYPE)),
+                    abi.encode(
+                        keccak256(bytes(MESSAGE_TYPE)),
                         _candidateId, // Input candidate
                         _votingAddress, // Input voting address
                         _nonce // Input nonce
